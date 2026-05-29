@@ -1,8 +1,7 @@
-# CodeStories — Feature Specification
+# Code Stories — Feature Specification
 
-**Version**: 0.1 (pre-implementation)  
-**Last updated**: 2025  
-**Status**: Draft
+**Version:** 0.1
+**Status:** Draft
 
 ---
 
@@ -10,214 +9,189 @@
 
 ### Problem Statement
 
-Learning data structures and algorithms (DSA) is a high-stakes, high-anxiety experience for most developers. LeetCode-style platforms present decontextualised problems with no narrative, no memory hooks, and no reason to care. The result: people grind problems mechanically without building durable intuition.
+Learning DSA for interviews is brutal. Leetcode is text-heavy, abstract, and isolating. Most people learn algorithms by reading walls of text or watching hour-long lecture videos they never finish.
 
-### Solution
+**Code Stories** flips the format: each Leetcode problem or DSA concept gets a 60–120 second visual story — narrated, animated, step-by-step. The feed is vertical and swipeable (like Reels), so you learn on the go without commitment.
 
-CodeStories wraps each DSA concept in a short illustrated comic narrative. The user reads a story arc (6–8 panels), absorbs the concept through metaphor and character, then immediately applies it by solving the embedded problem. Progress through arcs is gated on solving each problem — reading alone isn't enough.
+### Goals
 
-### Success Metrics
+- Make DSA concepts stick through narrative and visual storytelling
+- Zero-friction learning: open app → swipe → learn
+- Track progress so learners see real improvement over time
+- Enable discovery by topic, difficulty, and problem type
 
-- User can read a story arc and solve the attached problem in < 30 minutes for beginner topics
-- Retention: 70% of users who solve story 1 return to solve story 2
-- Story arc completion rate ≥ 60% (vs. ~10% for raw LeetCode problem completion)
+### Non-Goals (v0.1)
+
+- User-generated content / creator mode
+- Embedded code execution / sandboxes
+- Real-time multiplayer or collaboration
+- Native mobile apps
 
 ---
 
 ## 2. Functional Requirements
 
-### 2.1 Story Reading Experience
+### Feed
+- [ ] Vertical scroll-snap feed (one story per viewport, `scroll-snap-type: y mandatory`)
+- [ ] Each card: thumbnail, title, difficulty badge, duration, tag chips
+- [ ] Infinite scroll — load next 10 as user nears bottom
+- [ ] Feed preserves scroll position on back navigation
+- [ ] Empty state shown when no stories match filters
 
-- [ ] User can browse a library of story arcs organised by DSA category
-- [ ] Each story arc contains 6–8 sequential panels
-- [ ] Each panel has: illustration area, caption/narration text, optional character dialogue
-- [ ] User navigates panels with prev/next buttons and left/right arrow keys
-- [ ] Progress within a story is preserved if the user closes and re-opens
-- [ ] Final panel transitions directly into the embedded problem
+### Story Player
+- [ ] Full-screen video playback on card tap/click
+- [ ] HTML5 `<video>` with custom overlay controls: play/pause, scrub, mute, volume
+- [ ] Progress bar showing watch position
+- [ ] Overlay: problem title, difficulty, tags, Leetcode problem link
+- [ ] Auto-advance to next story on completion (3-second countdown with cancel)
+- [ ] Keyboard shortcuts: Space=play/pause, →=next, ←=prev, M=mute
 
-### 2.2 Code Sandbox
+### Auth
+- [ ] Email + password sign up and sign in via Supabase Auth
+- [ ] Persistent JWT session with auto-refresh
+- [ ] Sign out
+- [ ] Protected routes redirect to `/login` when unauthenticated
 
-- [ ] User can write JavaScript (and later Python) solutions in an embedded Monaco Editor
-- [ ] Code runs in an isolated Web Worker sandbox (no network access, no DOM)
-- [ ] Execution times out after 5 seconds (returns `TLE` status)
-- [ ] Each submission is validated against N ≥ 5 test cases
-- [ ] Per-test output: `passed | failed | error | TLE` with expected vs. actual diff
-- [ ] User can run code as many times as they like before "submitting"
-- [ ] "Submit" locks in the result and records it in the user's history
+### User Progress
+- [ ] Story marked "watched" when user reaches 80% of video duration
+- [ ] Watch history displayed on `/profile`
+- [ ] Completion % per topic tag shown on profile
+- [ ] Bookmarking: save stories to personal watchlist
 
-### 2.3 User Progress
+### Discovery
+- [ ] `/explore` page with filter + search
+- [ ] Filter by tag (Arrays, Trees, Graphs, DP, Sorting, etc.)
+- [ ] Filter by difficulty (Easy, Medium, Hard)
+- [ ] Full-text search on story title and problem name
+- [ ] Filters are combinable and URL-param-persisted (shareable)
 
-- [ ] Users sign in with GitHub OAuth or magic-link email
-- [ ] Completion of a story arc (= solving the problem) unlocks the next arc in the sequence
-- [ ] User profile shows: arcs completed, current streak, submission history
-- [ ] Stories are tagged with difficulty: Beginner / Intermediate / Advanced
-- [ ] Completed arcs show a visual badge; locked arcs show a lock icon
-
-### 2.4 Story Content (MDX)
-
-- [ ] Story panels are authored in MDX format
-- [ ] MDX supports: text, images, code snippets (syntax-highlighted), callouts
-- [ ] Each story file exports: `metadata` (title, category, difficulty, problemId) and panel array
+### Admin
+- [ ] `/admin` route (requires `admin` role via Supabase JWT claim)
+- [ ] Create story: title, description, video upload, difficulty, Leetcode URL, tags
+- [ ] Edit and delete stories
+- [ ] Story status: Draft | Published
 
 ---
 
 ## 3. Non-Functional Requirements
 
-- [ ] First Contentful Paint < 1.5s on 3G (story images lazy-loaded)
-- [ ] Code sandbox evaluation < 2s for typical O(n²) solutions on n ≤ 10,000
-- [ ] Accessible: WCAG 2.1 AA compliance (keyboard navigation, screen reader support)
-- [ ] Mobile-responsive layout (320px minimum width)
-- [ ] Zero third-party code execution in sandbox (Web Worker with restricted context)
+- [ ] Initial feed load < 1.5s on 3G (Lighthouse network throttle)
+- [ ] Lighthouse Performance ≥ 85, Accessibility ≥ 90
+- [ ] Mobile-first: feed and player fully usable on 375px viewport
+- [ ] No Supabase credentials exposed client-side
+- [ ] All Supabase tables have RLS policies — no public write access
+- [ ] Admin routes return HTTP 403 for non-admin users
 
 ---
 
 ## 4. Data Model
 
-### Story
+### `stories`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | auto |
+| `title` | text | e.g. "Two Sum: The HashMap Trick" |
+| `description` | text | 1–2 sentence teaser |
+| `video_url` | text | Supabase Storage URL |
+| `thumbnail_url` | text | Supabase Storage URL |
+| `difficulty` | enum(`easy`,`medium`,`hard`) | |
+| `leetcode_url` | text | nullable |
+| `duration_seconds` | int | |
+| `status` | enum(`draft`,`published`) | default `draft` |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
-```typescript
-type Story = {
-  id: string;               // e.g. "array-kingdom"
-  title: string;
-  description: string;      // 1-2 sentence teaser
-  category: DSACategory;    // ARRAYS | LINKED_LISTS | TREES | GRAPHS | DP | ...
-  difficulty: Difficulty;   // BEGINNER | INTERMEDIATE | ADVANCED
-  panels: Panel[];
-  problemId: string;        // references a Problem
-  prerequisites: string[];  // story IDs that must be completed first
-};
+### `tags`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `name` | text UNIQUE | e.g. `arrays`, `dynamic-programming` |
+| `color` | text | hex for badge |
 
-type Panel = {
-  id: string;
-  illustrationUrl: string;
-  narration: string;        // caption text below the image
-  dialogue?: Dialogue[];    // speech bubbles
-};
+### `story_tags`
+| Column | Type | Notes |
+|---|---|---|
+| `story_id` | uuid FK | |
+| `tag_id` | uuid FK | |
 
-type Dialogue = {
-  character: string;
-  text: string;
-  position: "left" | "right";
-};
-```
-
-### Problem
-
-```typescript
-type Problem = {
-  id: string;
-  title: string;
-  storyId: string;
-  prompt: string;           // Markdown problem description
-  starterCode: Record<Language, string>;
-  testCases: TestCase[];
-  solutionHints: string[];
-  officialSolution: Record<Language, string>;
-};
-
-type TestCase = {
-  id: string;
-  input: unknown[];
-  expected: unknown;
-  label?: string;           // e.g. "empty array", "all duplicates"
-  isHidden?: boolean;       // hidden cases only run on submit, not on Run
-};
-```
-
-### User Progress (DB — Prisma)
-
-```prisma
-model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  githubId    String?  @unique
-  createdAt   DateTime @default(now())
-  submissions Submission[]
-  progress    StoryProgress[]
-}
-
-model StoryProgress {
-  id        String   @id @default(cuid())
-  userId    String
-  storyId   String
-  status    ProgressStatus  // STARTED | COMPLETED
-  startedAt DateTime @default(now())
-  completedAt DateTime?
-  user      User @relation(fields: [userId], references: [id])
-  @@unique([userId, storyId])
-}
-
-model Submission {
-  id         String   @id @default(cuid())
-  userId     String
-  problemId  String
-  language   String
-  code       String
-  status     SubmitStatus  // PASSED | FAILED | TLE | ERROR
-  runtime    Int?          // ms
-  submittedAt DateTime @default(now())
-  user        User @relation(fields: [userId], references: [id])
-}
-```
+### `user_progress`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `user_id` | uuid FK → auth.users | |
+| `story_id` | uuid FK → stories | |
+| `watched` | bool | default false |
+| `watch_percent` | int | 0–100 |
+| `bookmarked` | bool | default false |
+| `last_watched_at` | timestamptz | |
 
 ---
 
-## 5. API Interface
+## 5. API / Interface Design
 
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| `GET` | `/api/stories` | optional | List all stories (with user progress if authed) |
-| `GET` | `/api/stories/:id` | optional | Single story metadata + panels |
-| `GET` | `/api/problems/:id` | optional | Problem prompt, starter code, visible test cases |
-| `POST` | `/api/run` | optional | Run code against visible tests (ephemeral, not saved) |
-| `POST` | `/api/submit` | required | Submit solution, save result, unlock next story |
-| `GET` | `/api/progress` | required | Current user's story progress |
-| `GET` | `/api/profile` | required | User profile + stats |
+```typescript
+// src/lib/stories.ts
+getStories(opts?: { tag?: string; difficulty?: string; search?: string; page?: number }): Promise<Story[]>
+getStoryById(id: string): Promise<Story | null>
+getStoriesByTag(tagName: string): Promise<Story[]>
+
+// src/lib/progress.ts
+getUserProgress(userId: string, storyId: string): Promise<UserProgress | null>
+markStoryWatched(userId: string, storyId: string, percent: number): Promise<void>
+toggleBookmark(userId: string, storyId: string): Promise<boolean>
+getUserWatchHistory(userId: string): Promise<UserProgress[]>
+```
+
+**Admin API Routes:**
+```
+POST   /api/stories              — create story (admin only)
+PATCH  /api/stories/[id]         — update story (admin only)
+DELETE /api/stories/[id]         — delete story (admin only)
+POST   /api/stories/[id]/publish — publish draft (admin only)
+```
 
 ---
 
 ## 6. Test Plan
 
-### Unit Tests (Vitest)
+### Unit Tests (Vitest + RTL)
+- `StoryCard`: renders title, badge, tags; handles missing thumbnail
+- `StoryPlayer`: play/pause toggle, progress bar updates, mute toggle
+- `StoryFeed`: renders list, empty state, loads more on scroll
+- `useStoryFeed`: fetches, paginates, tracks current index
+- `useAuth`: returns user, handles sign-out, loading state
+- Validation functions: required fields, URL format, tag count
 
-- `StoryPanel` renders narration text and image slot
-- `StoryPanel` renders dialogue bubbles when provided
-- `StoryReader` advances panel on next(), retreats on prev()
-- `StoryReader` does not go below panel 0 or above panel.length-1
-- `CodeEditor` calls `onChange` with updated code value
-- `sandbox.run(code, testCases)` → passes for correct solution
-- `sandbox.run(code, testCases)` → returns `TLE` for infinite loop
-- `sandbox.run(code, testCases)` → returns `ERROR` for syntax errors
-- `useProgress` returns correct status for each story
-
-### Integration Tests
-
-- `POST /api/submit` with valid passing code → returns `PASSED`, creates Submission record
-- `POST /api/submit` with failing code → returns `FAILED`, does NOT mark story complete
-- `POST /api/submit` when unauthenticated → returns 401
-- Story unlock: completing story A with prerequisite unlocks story B
+### Integration Tests (Vitest + Supabase dev)
+- `getStories()` returns only published stories
+- `getStoryById()` returns null for non-existent ID
+- `markStoryWatched()` upserts `user_progress`
+- `toggleBookmark()` correctly flips state
+- Admin API route: 403 for non-admin, 201 for valid admin request
 
 ### E2E Tests (Playwright)
-
-- User opens story index, clicks "Array Kingdom", reads all 8 panels
-- User reaches problem panel, writes correct solution, runs code, sees all tests pass
-- User submits, sees "Story Complete!" banner, sees next story unlocked
-- User revisits story index — "Array Kingdom" shows ✅ badge
+- Feed loads and shows at least one story card
+- Clicking a card opens story player
+- Video plays, progress bar advances
+- Reaching 80% marks story watched (verify on profile)
+- Tag filter: click "Arrays" → only Arrays stories shown
+- Search: type "two sum" → correct story appears
+- Sign up → session persists on page reload
 
 ### Edge Cases
-
-- Code that throws a synchronous exception: caught and reported as `ERROR`
-- Code that produces the right answer but exceeds 5s: reported as `TLE`
-- Problem with no visible test cases (all hidden): "Run" shows "Submit to see results"
-- Story with no prerequisites: visible and accessible to unauthenticated users
+- Empty feed (no published stories)
+- Video URL returns 404
+- Supabase unavailable (network error)
+- User watches same story multiple times (upsert, no duplicates)
+- Story with no tags assigned
+- Very long story title (overflow/truncation)
 
 ---
 
 ## 7. Open Questions
 
-- [ ] **Illustration sourcing**: commission artists, generate with Stable Diffusion, or use SVG characters? Consistent style across all stories is critical.
-- [ ] **Python support**: Pyodide adds ~10MB WASM download. Worth it at launch or later?
-- [ ] **Offline support**: should stories be readable offline (PWA)? Problem submission still needs network.
-- [ ] **Story ordering**: strict linear sequence per category, or a dependency graph the user can explore freely?
-- [ ] **Monetisation**: freemium (first 3 stories free, rest paywalled) or fully free with a Patreon?
-- [ ] **Community problems**: allow users to submit problem + story pairs for review?
+- **Video hosting:** Supabase Storage vs. Cloudflare R2 or Mux for CDN performance at scale?
+- **Video generation:** Manual uploads first → later explore Remotion for programmatic animation?
+- **Rate limiting:** Simple Next.js middleware vs. Upstash Redis?
+- **PWA:** Should v0.1 be installable as a PWA from day one?
+- **Analytics:** Which events to track? (story started, completed, searched, filtered)

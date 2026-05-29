@@ -1,57 +1,38 @@
-# CLAUDE.md — CodeStories
+# CLAUDE.md — Code Stories
 
-Context file for AI coding assistants. Keep this under 200 lines.
-Update it whenever you discover something non-obvious.
+Context for AI coding agents. Keep under 200 lines. Append to Lessons Learned when you discover something non-obvious.
 
 ---
 
-## Project Summary
+## Project in One Sentence
 
-**CodeStories** — Learn DSA through illustrated comic story arcs.
-Each story arc teaches one concept (arrays, linked lists, trees, etc.) and ends with an embedded coding problem. Solving the problem unlocks the next arc.
-
-Tech: **Next.js 14 (App Router) · TypeScript · Tailwind CSS · Prisma · PostgreSQL · Vitest · Playwright**
+Short-form vertical video feed (TikTok/Reels-style) for learning Leetcode and DSA — each story is a 60–120s narrated visual walkthrough of an algorithm problem.
 
 ---
 
 ## Commands
 
 ```bash
-# Install dependencies
-pnpm install
+# Development
+npm run dev           # Start Next.js dev server at localhost:3000
 
-# Dev server (http://localhost:3000)
-pnpm dev
+# Testing
+npm test              # Vitest unit + integration (watch mode)
+npm run test:run      # Vitest single run (CI)
+npm run test:e2e      # Playwright e2e (requires dev server on :3000)
+npm run test:e2e:ui   # Playwright with interactive UI
 
-# Run all unit tests (Vitest)
-pnpm test
+# Quality
+npm run lint          # ESLint
+npm run format        # Prettier --write
+npm run typecheck     # tsc --noEmit
 
-# Run tests in watch mode
-pnpm test:watch
-
-# Run E2E tests (Playwright — requires dev server running)
-pnpm test:e2e
-
-# Type check only (no emit)
-pnpm typecheck
-
-# Lint
-pnpm lint
-
-# Format
-pnpm format
-
-# Prisma: generate client after schema changes
-pnpm db:generate
-
-# Prisma: run migrations (dev)
-pnpm db:migrate
-
-# Prisma: open Prisma Studio
-pnpm db:studio
+# Build
+npm run build         # Next.js production build
+npm run start         # Start production server locally
 ```
 
-> ⚠️ Commands are placeholders until `package.json` is bootstrapped. Update this section immediately after running `create-next-app`.
+> **Before writing any code, run `npm test` to confirm the baseline is green.**
 
 ---
 
@@ -59,89 +40,87 @@ pnpm db:studio
 
 ```
 src/
-  components/     UI components — StoryPanel, StoryReader, CodeEditor, TestCaseRunner
-  stories/        MDX content files — one per story arc (e.g. array-kingdom.mdx)
-  problems/       Problem definitions (TS objects) + test cases
+  app/                # Next.js App Router
+    (feed)/           # Route group: home feed
+    story/[id]/       # Story player page
+    explore/          # Discovery + search + filters
+    profile/          # Watch history, bookmarks (auth required)
+    admin/            # Story CRUD (admin role required)
+    login/ signup/    # Auth pages
+    api/              # Route handlers (stories CRUD, auth callbacks)
+  components/
+    feed/             # StoryCard, StoryFeed, ScrollSnapContainer
+    player/           # StoryPlayer, StoryOverlay, ProgressBar, Controls
+    ui/               # Button, Badge, TagChip, Skeleton, DifficultyBadge
+    layout/           # Header, BottomNav, AuthGuard
   lib/
-    types.ts      Shared TypeScript types (Story, Panel, Problem, TestCase, ...)
-    sandbox.ts    Web Worker-based code execution sandbox
-    db.ts         Prisma client singleton
-    auth.ts       NextAuth config
-  hooks/          Custom React hooks (useProgress, useStory, useCodeRunner)
-  styles/         Global CSS, comic-panel layout classes
+    supabase.ts       # Client singleton — browser + server variants
+    stories.ts        # getStories, getStoryById, getStoriesByTag
+    progress.ts       # markStoryWatched, toggleBookmark, getUserWatchHistory
+    auth.ts           # signIn, signUp, signOut helpers
+  hooks/
+    useStoryFeed.ts   # Fetches + paginates stories, tracks current index
+    useAuth.ts        # Returns { user, loading, signOut }
+    useProgress.ts    # Per-story watch state and bookmark toggle
+  types/
+    index.ts          # Story, Problem, Tag, UserProgress, Difficulty
 tests/
-  unit/           Vitest unit tests — mirror src/ structure
-  integration/    API route tests with test DB
-  e2e/            Playwright journeys
-docs/
-  spec.md         Feature specification — read this before building anything new
-  adr/            Architecture Decision Records
+  unit/               # mirrors src/components and src/hooks
+  integration/        # real dev Supabase, run with credentials in env
+  e2e/                # Playwright, target localhost:3000
 ```
+
+---
+
+## Key Conventions
+
+### Supabase
+- Use `createServerClient` (from `@supabase/ssr`) in Server Components and API routes
+- Use `createBrowserClient` only in Client Components / hooks
+- `SUPABASE_SERVICE_ROLE_KEY` — server only, never in `NEXT_PUBLIC_` env vars
+- All tables must have RLS enabled — no exceptions
+
+### TypeScript
+- Strict mode on — no `any`, no `@ts-ignore` without explanation comment
+- Generate DB types: `npx supabase gen types typescript --local > src/types/supabase.ts`
+- Use `zod` for runtime validation on all API route inputs
+
+### Components
+- Default to React Server Components; add `"use client"` only for DOM APIs or hooks
+- `StoryPlayer` and `StoryFeed` are client components (video API, scroll events)
+- No `useEffect` for initial data loading — use server component async functions
+
+### Styling
+- Tailwind only — no inline `style={{}}` except CSS variables for dynamic values
+- Mobile-first — base styles for mobile, `md:` / `lg:` for larger screens
+- Scroll snap: `scroll-snap-type: y mandatory` on feed container, `scroll-snap-align: start` on cards
+
+---
+
+## Non-Obvious Gotchas
+
+- **Supabase SSR:** Use `@supabase/ssr` package, NOT deprecated `@supabase/auth-helpers-nextjs`
+- **Video autoplay:** Browsers block autoplay with audio. Default: muted autoplay. User unmutes manually.
+- **Scroll snap on iOS Safari:** Parent must use `overflow-y: scroll` (not `auto`) for snap to work
+- **Supabase admin role:** Check `auth.jwt() ->> 'role' = 'admin'` — set via custom JWT claim, not a column
+- **`generateMetadata` async params:** In Next.js 15, `params` is a Promise — `await params` before destructuring
 
 ---
 
 ## Workflow
 
-Before writing any code:
-1. `pnpm test` — confirm existing tests pass (never break existing green tests)
-2. Read `TODO.md` — find the next unchecked item in the current phase
-3. Read `docs/spec.md` section relevant to what you're building
-4. **Write failing tests first** (red phase) — confirm they fail for the right reason
-5. Implement until tests pass (green phase)
-6. Manually review the diff — read every changed line
-7. Commit with a message like: `feat(story-reader): implement panel navigation`
-8. If you learned something non-obvious → update `CLAUDE.md` or `AGENTS.md`
+1. **Read TODO.md** — find the current phase, pick the next unchecked task
+2. **Run `npm test`** — confirm baseline is green before touching anything
+3. **Write a failing test** (red) — commit with `test: ...` prefix
+4. **Implement until green** — commit with `feat:` or `fix:`
+5. **Run `npm run lint && npm run typecheck`** — fix before committing
+6. **Update this file** with anything non-obvious you discovered
+7. **Check off the task** in TODO.md
 
 ---
 
-## Non-Obvious Conventions
+## Lessons Learned
 
-### Story Content (MDX)
-- Each `.mdx` file in `src/stories/` must export a `metadata` object and a default array of `Panel` objects
-- Panel illustrations live in `public/illustrations/<story-id>/panel-<n>.svg`
-- Never inline base64 images — always reference `/illustrations/...` paths
+_Append: `YYYY-MM-DD — what you discovered`_
 
-### Code Sandbox (`src/lib/sandbox.ts`)
-- Code runs in a **Web Worker** with `importScripts` blocked — no external network
-- The worker communicates via `postMessage` with a structured `SandboxRequest` / `SandboxResponse` type
-- Timeout is enforced by the host thread (`setTimeout` + `worker.terminate()`)
-- Never run user code in the main thread or in a server-side API route
-
-### Database
-- Prisma client is a singleton exported from `src/lib/db.ts` — do not `new PrismaClient()` elsewhere
-- Migrations go in `prisma/migrations/` — never edit generated migration files
-- Use `prisma.$transaction([...])` for any multi-table writes (e.g., submit + unlock)
-
-### Testing
-- Unit tests in `tests/unit/` mirror `src/` structure: `src/components/StoryPanel.tsx` → `tests/unit/components/StoryPanel.test.tsx`
-- Integration tests spin up a test DB via `DATABASE_URL_TEST` env var
-- E2E tests require the dev server to be running (`pnpm dev`) — or use `webServer` config in `playwright.config.ts`
-- Never use `screen.getByTestId` unless no semantic query exists — prefer `getByRole`, `getByLabelText`
-
-### TypeScript
-- Strict mode is on — no `any`, no `@ts-ignore` without a comment explaining why
-- All API responses have explicit return types; use `z.infer<typeof Schema>` for validated inputs (Zod)
-
----
-
-## Environment Variables
-
-See `.env.example` for the full list. Key ones:
-
-| Variable | Purpose |
-|----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `DATABASE_URL_TEST` | Separate DB for integration tests |
-| `NEXTAUTH_SECRET` | NextAuth signing secret |
-| `GITHUB_CLIENT_ID` | GitHub OAuth app client ID |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth app secret |
-
----
-
-## What NOT to Do
-
-- Do not run user code outside the Web Worker sandbox
-- Do not store full solution code in plain text client-side (only after submission)
-- Do not refactor unrelated code while implementing a feature
-- Do not remove or skip existing passing tests
-- Do not commit `.env.local` or any file containing secrets
+- (none yet)

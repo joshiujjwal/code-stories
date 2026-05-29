@@ -1,154 +1,184 @@
-# CodeStories — Task Breakdown
+# code-stories — Task Breakdown
 
 ## How to Use This File
 
-Workflow per task:
-1. **Write tests FIRST** (red phase — tests must fail before you write implementation)
-2. **Implement until tests pass** (green phase)
-3. **Review diff manually** — read every changed line before committing
-4. **Commit with a descriptive message** referencing the TODO item
-5. **Update CLAUDE.md / AGENTS.md** if you discovered a non-obvious convention
-6. **Check off the item** and move to the next
+One task at a time, in phase order. Evidence gates block phase transitions.
 
-> 🔴 Never skip the red phase. If you can't write a failing test first, write the test file as a stub with `test.todo(...)` entries before coding.
+**Workflow per task:**
+1. Write failing tests FIRST (red phase) — commit them
+2. Implement until tests pass (green phase) — commit
+3. Review the diff manually — no surprises
+4. Commit with a descriptive message
+5. If you learned something non-obvious, append it to CLAUDE.md → Lessons Learned
+
+**Phase gate rule:** Do NOT start the next phase until ALL items in the current phase are checked AND tests pass CI.
 
 ---
 
 ## Phase 0: Foundation ⬜
 
-> Gate: CI is green, smoke test passes, linter has zero warnings.
+- [ ] Init Next.js 14 project with TypeScript: `npx create-next-app@latest . --typescript --tailwind --app --src-dir`
+- [ ] Configure ESLint + Prettier
+- [ ] Set up Vitest + React Testing Library
+- [ ] Set up Playwright: `npx playwright install`
+- [ ] Write first smoke test: app renders without crashing (red → green)
+- [ ] Configure path aliases: `@/` → `src/` in `tsconfig.json`
+- [ ] Add `.env.example` with all required keys (no values committed)
+- [ ] Set up GitHub Actions CI: lint + unit tests + build on push / PRs
+- [ ] Configure Supabase dev project, get credentials into `.env.local`
+- [ ] Review AI config files (CLAUDE.md, AGENTS.md, copilot-instructions.md)
 
-- [ ] Initialize Next.js 14 project with TypeScript (`npx create-next-app@latest`)
-- [ ] Configure pnpm as package manager (preferred for monorepo-readiness)
-- [ ] Set up Tailwind CSS + shadcn/ui base components
-- [ ] Install and configure Vitest + React Testing Library
-- [ ] Install and configure Playwright for E2E
-- [ ] Write first smoke test: `renders root page without crashing`
-- [ ] Set up ESLint + Prettier with project-specific rules
-- [ ] Create `.env.example` with all required environment variable keys (no secrets)
-- [ ] Set up GitHub Actions CI: lint → unit tests → build on every PR
-- [ ] Set up Prisma + PostgreSQL schema (local Docker for dev)
-- [ ] Review and tailor all AI config files (CLAUDE.md, AGENTS.md, copilot-instructions.md)
-
----
-
-## Phase 1: Story Viewer — Core Reading Experience ⬜
-
-> Gate: A user can open a story, read through panels with illustrated narrative, and reach the embedded problem.
-
-- [ ] Define `Story` and `Panel` TypeScript types in `src/lib/types.ts`
-- [ ] Write failing tests for `StoryPanel` component (renders title, image slot, narrative text)
-- [ ] Implement `StoryPanel` component — comic-panel layout with caption area
-- [ ] Write failing tests for `StoryReader` component (sequences panels, keyboard/click nav)
-- [ ] Implement `StoryReader` — panel-by-panel progression with prev/next navigation
-- [ ] Write failing test for `StoryIndex` page (lists all available story arcs by category)
-- [ ] Implement `StoryIndex` page with search and category filter
-- [ ] Author first complete story arc: **"The Array Kingdom"** (intro to arrays + two-pointer)
-  - [ ] Write MDX file `src/stories/array-kingdom.mdx` with 6–8 panels
-  - [ ] Add placeholder illustrations (SVG or placeholder images)
-  - [ ] Embed the problem at the end of the story
-- [ ] Manual testing: read through the full Array Kingdom story
-- [ ] Playwright E2E: user navigates from index → story → final problem panel
+**Evidence gate:** CI green. Smoke test passes. `npm run build` succeeds.
 
 ---
 
-## Phase 2: Code Sandbox & Problem Solving ⬜
+## Phase 1: Data Model + API Foundation ⬜
 
-> Gate: A user can read the embedded problem, write JS/Python code, run it, and see pass/fail feedback.
+- [ ] Define TypeScript types: `Story`, `Problem`, `Tag`, `UserProgress` in `src/types/`
+- [ ] Write failing integration tests for Supabase schema assumptions
+- [ ] Create Supabase tables: `stories`, `problems`, `tags`, `story_tags`, `user_progress`
+- [ ] Enable RLS on all tables; write policies
+- [ ] Write Supabase client singleton in `src/lib/supabase.ts` (browser + server variants)
+- [ ] Write failing tests for `getStories()`, `getStoryById()`, `getStoriesByTag()`
+- [ ] Implement data-fetching functions in `src/lib/stories.ts`
+- [ ] Write failing tests for `getUserProgress()`, `markStoryWatched()`, `toggleBookmark()`
+- [ ] Implement progress tracking in `src/lib/progress.ts`
+- [ ] Seed database with 3 sample stories (Two Sum, Binary Search, FizzBuzz)
 
-- [ ] Define `Problem`, `TestCase`, and `Submission` types
-- [ ] Write failing tests for `CodeEditor` component (Monaco integration, onChange, language toggle)
-- [ ] Implement `CodeEditor` wrapper around Monaco Editor
-- [ ] Write failing tests for in-browser JS code runner (`src/lib/sandbox.ts`)
-  - [ ] Handles syntax errors gracefully
-  - [ ] Times out runaway loops (5s limit)
-  - [ ] Returns structured `{ passed, output, error }` per test case
-- [ ] Implement JS sandbox using Web Workers (`new Worker(...)` + structured clone)
-- [ ] Write failing tests for `TestCaseRunner` component (displays per-test-case pass/fail)
-- [ ] Implement `TestCaseRunner` with diff output for failed assertions
-- [ ] Write problem definition for Array Kingdom problem with 5 test cases
-- [ ] Wire `StoryReader` end panel → `CodeEditor` + `TestCaseRunner`
-- [ ] E2E test: user writes a correct solution, submits, sees all tests pass
-- [ ] E2E test: user writes a wrong solution, sees which test case failed and why
+**Evidence gate:** All integration tests pass against dev Supabase. Can query seeded stories.
 
 ---
 
-## Phase 3: User Progress & Story Library ⬜
+## Phase 2: Video Feed (Core UI) ⬜
 
-> Gate: Progress persists across sessions. Users can see which stories they've completed.
+- [ ] Write failing tests for `StoryCard` (renders title, difficulty badge, thumbnail, tags)
+- [ ] Implement `StoryCard` component with Tailwind
+- [ ] Write failing tests for `StoryFeed` (renders list, handles empty state, scroll snap)
+- [ ] Implement `StoryFeed` with vertical scroll-snap (CSS `scroll-snap-type: y mandatory`)
+- [ ] Write failing tests for `useStoryFeed` hook (fetches, paginates, tracks current index)
+- [ ] Implement `useStoryFeed` with Zustand
+- [ ] Build `/` (home feed) page — server-fetches initial stories, passes to client feed
+- [ ] Write failing tests for keyboard navigation (arrow keys, scroll)
+- [ ] Implement keyboard + touch/swipe navigation
+- [ ] Add loading skeletons for feed cards
 
-- [ ] Design Prisma schema: `User`, `StoryProgress`, `Submission` models
-- [ ] Write failing integration tests for progress API routes (`/api/progress`, `/api/submit`)
-- [ ] Implement `POST /api/submit` — saves submission, evaluates server-side, returns result
-- [ ] Implement `GET /api/progress` — returns user's story completion statuses
-- [ ] Set up NextAuth.js (GitHub OAuth + email magic link)
-- [ ] Write failing test for `useProgress` hook
-- [ ] Implement `useProgress` hook (optimistic update + SWR)
-- [ ] `StoryIndex` page shows completion badges (✅ / 🔒 locked / ⬜ unstarted)
-- [ ] Unlock gating: Story 2 unlocks only after Story 1 is solved (per arc)
-- [ ] User profile page: streak, solved count, favourite category
-
----
-
-## Phase 4: Story Content Expansion ⬜
-
-> Gate: At least 5 complete story arcs covering foundational DSA topics.
-
-- [ ] **"The Linked List Express"** — linked lists, reversal, cycle detection
-- [ ] **"Forest of Recursion"** — recursion, base cases, call stack visualized
-- [ ] **"The Binary Search Detective"** — binary search, sorted array invariants
-- [ ] **"Hash Map Heist"** — hash maps, collision, frequency counting
-- [ ] **"Stack & Queue: The Time Machine"** — stack, queue, BFS vs DFS intro
-- [ ] Each story: 6–8 MDX panels, 1 embedded problem, 5+ test cases
-- [ ] Commission or generate panel illustrations (consistent art style guide in docs/)
+**Evidence gate:** Feed renders 3 seeded stories. Scroll snap works on mobile viewport in Playwright.
 
 ---
 
-## Phase 5: Polish & Harden ⬜
+## Phase 3: Story Player ⬜
 
-> Gate: Lighthouse ≥ 90, no accessibility violations, test coverage ≥ 80%.
+- [ ] Write failing tests for `StoryPlayer` (renders video, play/pause, progress bar updates)
+- [ ] Implement `StoryPlayer` with HTML5 `<video>` and custom controls
+- [ ] Write failing tests for `StoryOverlay` (shows title, difficulty, tags, Leetcode link)
+- [ ] Implement `StoryOverlay` positioned over video
+- [ ] Build `/story/[id]` dynamic route
+- [ ] Write failing test for auto-advance on video completion (fires after 3s countdown)
+- [ ] Implement auto-advance in `useStoryFeed`
+- [ ] Write failing test for progress persistence (80% watched → stored in Supabase)
+- [ ] Implement `markStoryWatched` call on video progress update
+- [ ] Add mute/unmute toggle; default to muted autoplay (browser policy)
 
-- [ ] Audit and fix all accessibility issues (axe-core in tests)
-- [ ] Add keyboard-first navigation for story panels
-- [ ] Add dark mode (Tailwind dark: classes + system preference detection)
-- [ ] Implement error boundaries on `StoryReader` and `CodeEditor`
-- [ ] Add rate limiting to `/api/submit` (to prevent abuse)
-- [ ] Load testing: simulate 100 concurrent sandbox evaluations
-- [ ] Optimize image delivery (next/image with blur placeholders)
-- [ ] Add OG image generation per story (for social sharing)
-- [ ] SEO: per-story metadata, sitemap, robots.txt
-
----
-
-## Phase 6: Ship ⬜
-
-> Gate: Production deploy is live, monitoring is in place, README has accurate setup docs.
-
-- [ ] Deploy to Vercel (preview + production environments)
-- [ ] Set up Railway or Supabase for production PostgreSQL
-- [ ] Configure environment secrets in Vercel dashboard
-- [ ] Set up error tracking (Sentry)
-- [ ] Set up uptime monitoring
-- [ ] Write accurate `Getting Started` docs in README
-- [ ] Announce on HN / dev.to / X with story screenshot
+**Evidence gate:** Full playback works. Progress saves. Auto-advance fires. Playwright e2e passes.
 
 ---
 
-## Parking Lot 🅿️
+## Phase 4: Auth + User Profiles ⬜
 
-> Ideas not yet scheduled — drop things here during sprints.
+- [ ] Write failing tests for Supabase Auth flows (sign up, sign in, sign out)
+- [ ] Implement auth helpers in `src/lib/auth.ts`
+- [ ] Build `/login` and `/signup` pages
+- [ ] Write failing tests for `useAuth` hook (returns user, loading, sign-out)
+- [ ] Implement `useAuth` with Supabase session listener
+- [ ] Add middleware auth guard for protected routes (`/profile`, `/admin`)
+- [ ] Write failing tests for `/profile` page (shows watch history, completion %)
+- [ ] Implement `/profile` page
+- [ ] Write failing tests for bookmark toggle
+- [ ] Implement bookmark feature (toggle, list in profile)
 
-- Python code runner (Pyodide in Web Worker)
-- AI-generated story hints when user is stuck
-- Community problem submissions alongside stories
-- Spaced repetition review system for solved problems
-- Mobile-first comic layout with swipe gestures
-- Leaderboard / competitive mode per story arc
+**Evidence gate:** Sign up → watch story → profile shows watched story. All auth tests green.
+
+---
+
+## Phase 5: Content Management (Admin) ⬜
+
+- [ ] Write failing tests for `POST /api/stories` (creates story, returns 403 for non-admin)
+- [ ] Implement admin API route with Supabase role check
+- [ ] Build `/admin/stories/new` form (title, description, video upload, difficulty, tags, Leetcode URL)
+- [ ] Write failing tests for story input validation (required fields, URL format, tag limits)
+- [ ] Implement zod validation shared between client and API
+- [ ] Write failing tests for video upload to Supabase Storage
+- [ ] Implement video upload (client-side → signed URL → store reference)
+- [ ] Write failing tests for story edit and delete
+- [ ] Implement edit/delete in admin UI and API routes
+- [ ] Add admin dashboard listing all stories with status badges
+
+**Evidence gate:** Admin can CRUD stories. Videos upload and play. Non-admin gets 403.
+
+---
+
+## Phase 6: Discovery + Search ⬜
+
+- [ ] Write failing tests for tag filter (click tag → feed shows only matching stories)
+- [ ] Implement tag filter UI (pill chips, active state, URL param persistence)
+- [ ] Write failing tests for difficulty filter (Easy / Medium / Hard)
+- [ ] Implement difficulty filter
+- [ ] Write failing tests for full-text search (title + problem name)
+- [ ] Implement search using Supabase `ilike` or `pg_trgm`
+- [ ] Write failing tests for `/explore` page (filters combinable, URL param synced)
+- [ ] Implement `/explore` page
+- [ ] Add "Related Stories" section at end of player (same tag or difficulty)
+
+**Evidence gate:** Search and combined filters work. Playwright e2e test covers full filter flow.
+
+---
+
+## Phase 7: Polish & Harden ⬜
+
+- [ ] Add error boundaries to feed and player routes
+- [ ] Write failing tests for error states (network fail, video 404, empty feed)
+- [ ] Implement graceful error UI for all edge cases
+- [ ] Audit Lighthouse: target Performance ≥ 85, Accessibility ≥ 90
+- [ ] Add Open Graph meta tags for story pages (shareable link preview)
+- [ ] Add `generateMetadata` in dynamic routes for SEO
+- [ ] Write Playwright performance test: feed initial load < 1.5s on 3G throttle
+- [ ] Implement lazy loading + intersection observer for off-screen video elements
+- [ ] Add rate limiting to admin API routes
+- [ ] Security audit: verify RLS policies on all tables, no public write access
+
+**Evidence gate:** Lighthouse ≥ 85/90. All error paths tested. Security review signed off.
+
+---
+
+## Phase 8: Ship ⬜
+
+- [ ] Configure Vercel project (link repo, set env vars)
+- [ ] Set up preview deployments for every PR
+- [ ] Deploy to production URL
+- [ ] Manual smoke test on production: sign up → watch story → check profile
+- [ ] Write `docs/launch.md` post-launch checklist
+- [ ] Tag `v0.1.0` release in GitHub
+
+**Evidence gate:** Production URL live. Smoke test passes. v0.1.0 tagged.
+
+---
+
+## Parking Lot ��️
+
+- Remotion pipeline: programmatically generate animated algorithm walkthroughs
+- "Solve It" mode: embedded code sandbox after watching a story
+- Community comments per story
+- Learning paths: curated story sequences (Arrays → Trees → Graphs → DP)
+- Daily streak tracking (watch N stories/day)
+- Story creator mode (user-submitted stories)
+- Spaced repetition reminders
+- React Native mobile app with shared lib logic
+- Story transcript + closed captions (accessibility)
 
 ---
 
 ## Lessons Learned 📝
 
-> Update this section whenever you discover a non-obvious truth about this codebase or workflow.
+_Append: `YYYY-MM-DD — what you discovered`_
 
-_Nothing here yet — fill in as you build._
+- (none yet)

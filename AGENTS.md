@@ -1,154 +1,97 @@
-# AGENTS.md — CodeStories
+# AGENTS.md — Code Stories
 
-Setup and workflow instructions for autonomous coding agents (OpenAI Codex, GitHub Copilot Workspace, etc.).
+OpenAI Codex / agentic agent instructions. Read this before writing any code.
 
 ---
 
 ## Setup
 
 ```bash
-# 1. Install dependencies
-pnpm install
-
-# 2. Set up environment
-cp .env.example .env.local
-# Fill in DATABASE_URL, NEXTAUTH_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
-
-# 3. Run database migrations
-pnpm db:migrate
-
-# 4. Verify setup — these must all pass before doing any work
-pnpm typecheck
-pnpm lint
-pnpm test
+npm install
+cp .env.example .env.local    # fill in Supabase credentials
+npm run dev                   # verify dev server starts at localhost:3000
+npm test                      # verify baseline tests pass
 ```
 
-If any of the verification steps fail, **stop and fix them before proceeding**. Never start a task on a broken baseline.
+Required env vars (see `.env.example`):
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only — never exposed to browser)
 
 ---
 
-## Tech Stack Quick Reference
+## Testing
 
-| Layer | Tool | Notes |
-|-------|------|-------|
-| Framework | Next.js 14 App Router | Use server components by default; opt into `"use client"` only when needed |
-| Language | TypeScript (strict) | No `any`. Use `unknown` and narrow with guards or Zod |
-| Styling | Tailwind CSS + shadcn/ui | Utility-first; no custom CSS files unless doing comic-panel layout |
-| Content | MDX | Story panels live in `src/stories/*.mdx` |
-| DB ORM | Prisma | Schema at `prisma/schema.prisma` |
-| Auth | NextAuth.js v5 | Config in `src/lib/auth.ts` |
-| State | SWR + React hooks | No Redux; server state via SWR, UI state via `useState` / `useReducer` |
-| Testing | Vitest + RTL (unit), Playwright (E2E) | See Testing section below |
+**Write tests before implementing.** Red → Green → Refactor.
+
+```bash
+npm test              # watch mode — keep running while developing
+npm run test:run      # single run — use for CI verification
+npm run test:e2e      # Playwright e2e (requires dev server on localhost:3000)
+```
+
+- Unit tests: `tests/unit/` — Vitest + React Testing Library
+- Integration tests: `tests/integration/` — require Supabase dev credentials
+- E2E tests: `tests/e2e/` — Playwright targeting `localhost:3000`
+- Every PR must paste test output confirming new/modified tests are green
 
 ---
 
 ## Code Style
 
-### TypeScript
+**TypeScript**
+- Strict mode: no `any`, no implicit `any`
+- Prefer `interface` for object shapes, `type` for unions/aliases
+- Validate all API inputs with `zod` before touching the database
 
-```typescript
-// ✅ Explicit return types on all exported functions
-export function getStory(id: string): Story | null { ... }
+**React / Next.js**
+- App Router only — no `pages/` directory
+- Server Components by default; `"use client"` only when DOM APIs or hooks are needed
+- Data fetching: `async` server components and `lib/` functions — not `useEffect`
 
-// ✅ Zod for runtime validation of external data
-const StorySchema = z.object({ id: z.string(), title: z.string() });
-type Story = z.infer<typeof StorySchema>;
+**Tailwind CSS**
+- Mobile-first: base = mobile, `md:` / `lg:` = larger
+- No inline `style={{}}` except for dynamic CSS custom properties
+- Class order: layout → spacing → typography → color → state
 
-// ❌ Never use `any`
-// ❌ Never use non-null assertion (!) without a comment
-```
-
-### React / Next.js
-
-```tsx
-// ✅ Server components by default
-// app/stories/page.tsx — no "use client" directive needed
-export default async function StoriesPage() { ... }
-
-// ✅ Client component only when you need browser APIs or event handlers
-"use client";
-export function StoryReader({ panels }: { panels: Panel[] }) { ... }
-
-// ✅ Named exports for components, default exports for pages
-export function StoryPanel({ panel }: { panel: Panel }) { ... }
-```
-
-### Naming
-
-| Thing | Convention | Example |
-|-------|-----------|---------|
-| Components | PascalCase | `StoryPanel.tsx` |
-| Hooks | camelCase with `use` prefix | `useProgress.ts` |
-| Utilities | camelCase | `formatDuration.ts` |
-| Types/interfaces | PascalCase | `type StoryProgress` |
-| Constants | SCREAMING_SNAKE_CASE | `MAX_EXECUTION_TIME_MS` |
-| Route handlers | `route.ts` inside app dir | `app/api/submit/route.ts` |
+**Naming**
+- Components: PascalCase (`StoryCard.tsx`)
+- Hooks: `useCamelCase` (`useStoryFeed.ts`)
+- Lib functions: camelCase (`getStoryById`)
+- Constants: SCREAMING_SNAKE_CASE (`MAX_FEED_PAGE_SIZE`)
+- Types/interfaces: PascalCase (`Story`, `UserProgress`)
 
 ---
 
-## Testing Instructions
-
-### Red/Green TDD — Non-Negotiable
-
-1. **Write the test first.** It must fail (`red`).
-2. Confirm it fails for the right reason (not a syntax error).
-3. Write the minimum implementation to make it pass (`green`).
-4. Refactor if needed, keeping tests green.
-
-### Running Tests
-
-```bash
-pnpm test              # Run all Vitest unit + integration tests
-pnpm test:watch        # Watch mode during development
-pnpm test:e2e          # Playwright E2E (requires running dev server)
-pnpm test -- --coverage  # With coverage report
-```
-
-### Test File Conventions
-
-- Unit tests: `tests/unit/<mirror-of-src-path>.test.tsx`
-- Integration tests: `tests/integration/<route-or-feature>.test.ts`
-- E2E tests: `tests/e2e/<user-journey>.spec.ts`
-- Use `describe` blocks matching the component or function name
-- Use `it("does X when Y")` style — not `test("test1")`
-
-### What to Test
-
-| Type | Test this |
-|------|-----------|
-| `StoryPanel` | renders narration, image, dialogue; handles missing optional props |
-| `StoryReader` | panel navigation, keyboard events, boundary conditions |
-| `sandbox.ts` | correct solution passes, wrong solution fails, infinite loop → TLE, syntax error → ERROR |
-| API routes | happy path, auth-required routes return 401, invalid input returns 400 |
-| Progress unlock | story unlocks only after problem solved, not after reading |
-
----
-
-## Pull Request Instructions
+## PR Requirements
 
 Every PR must include:
+1. **What changed** — 2–3 sentence description
+2. **Tests added/modified** — list files and what they cover
+3. **Test output** — paste of `npm run test:run` showing green
+4. **Manual testing evidence** — what you tested manually or Playwright test name
+5. **Screenshot** — for any UI change
 
-1. **A failing test** that existed before your implementation (prove the red phase happened)
-2. **Evidence of green**: paste `pnpm test` output showing all tests pass
-3. **For UI changes**: a screenshot or short screen recording
-4. **Description**: one paragraph explaining *what* changed and *why*
-5. **No unrelated changes**: diff must be minimal and focused
+**Rules:**
+- One concern per PR — no mixed refactors
+- Do not remove existing tests unless the tested feature is deleted
+- `npm run lint && npm run typecheck && npm run build` must all pass before review
 
-### PR Title Format
+---
 
-```
-<type>(<scope>): <short description>
+## Security Rules
 
-feat(story-reader): add keyboard navigation for panels
-fix(sandbox): handle async functions that return undefined
-test(code-editor): add missing edge case for empty input
-docs(spec): update data model with Submission.runtime field
-```
+- Never commit `.env.local` or real credentials
+- `SUPABASE_SERVICE_ROLE_KEY` only in server-side code (API routes, server components)
+- All admin API routes must verify `admin` role via Supabase JWT claims
+- All Supabase tables must have RLS enabled
+- Validate all user inputs with `zod`
 
-### What Agents Must NOT Do in PRs
+---
 
-- Do not remove or skip existing passing tests
-- Do not add `eslint-disable` comments without explaining why
-- Do not introduce new dependencies without updating `docs/spec.md`
-- Do not refactor code outside the scope of the task
-- Do not commit `.env.local`, `*.pem`, or any credential file
+## Out of Scope
+
+- Do not refactor working code unless asked
+- Do not upgrade dependencies without instruction
+- Do not add analytics/tracking without explicit instruction
+- Do not run Supabase migrations directly — write SQL files in `supabase/migrations/`, human runs them

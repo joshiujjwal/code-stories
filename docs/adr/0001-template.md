@@ -1,32 +1,22 @@
-# ADR Template
+# ADR 0001: [Title]
 
-## ADR-XXXX: [Short Title]
-
-**Date**: YYYY-MM-DD  
-**Status**: Proposed | Accepted | Deprecated | Superseded by ADR-XXXX  
-**Deciders**: [list names or roles]
+**Date:** YYYY-MM-DD
+**Status:** Proposed | Accepted | Deprecated | Superseded by ADR-XXXX
 
 ---
 
-### Context
+## Context
 
-What is the issue or situation that this decision addresses? What forces are at play?
+What is the issue we're deciding about? What forces are at play?
 
-### Decision
+## Decision
 
-What was decided?
+What did we decide to do?
 
-### Consequences
+## Consequences
 
-What are the positive and negative results of this decision?
+What becomes easier or harder as a result of this decision?
 
-- ✅ Pro: ...
-- ✅ Pro: ...
-- ⚠️ Con: ...
-- ⚠️ Con: ...
+---
 
-### Alternatives Considered
-
-| Option | Why rejected |
-|--------|-------------|
-| ... | ... |
+_Copy this file and rename to `000N-short-title.md` for each new decision._

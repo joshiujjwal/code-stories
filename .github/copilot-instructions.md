@@ -1,72 +1,60 @@
-# GitHub Copilot Instructions — CodeStories
+# GitHub Copilot Instructions — Code Stories
 
-## Project Context
+## Stack
 
-**CodeStories** teaches data structures & algorithms through illustrated comic narratives. Users read a story arc (6–8 panels), then solve an embedded coding problem. Solving unlocks the next arc.
-
-**Stack**: Next.js 14 App Router · TypeScript (strict) · Tailwind CSS · shadcn/ui · MDX · Prisma · PostgreSQL · Vitest · Playwright
+- **Framework:** Next.js 14 with App Router
+- **Language:** TypeScript (strict mode)
+- **Styling:** Tailwind CSS (mobile-first)
+- **Database / Auth:** Supabase (Postgres + Auth + Storage + RLS)
+- **State:** Zustand (client-side feed and player state)
+- **Animation:** Framer Motion
+- **Testing:** Vitest + React Testing Library (unit/integration), Playwright (e2e)
 
 ---
 
 ## Coding Conventions
 
-### TypeScript
-- Strict mode is ON — no `any`, no `@ts-ignore` without an explanation comment
-- Prefer `unknown` over `any` for untyped input; narrow with Zod or type guards
-- All exported functions have explicit return types
-- Use `z.infer<typeof Schema>` for types derived from Zod schemas
+### Components
+- React Server Components by default — `"use client"` only for hooks, events, or browser APIs
+- Props typed with interface: `interface StoryCardProps { ... }`
+- Always handle loading, error, and empty states
+- Prefer small, focused components (< 150 lines)
 
-### React / Next.js
-- Default to **Server Components** — add `"use client"` only for interactivity or browser APIs
-- Named exports for components, default exports for Next.js pages/layouts
-- Co-locate component-specific hooks with the component file until they're reused
-- Use `next/image` for all images — never raw `<img>` tags
+### Hooks
+- `src/hooks/` — one hook per file, named `use[Feature].ts`
+- Return typed objects: `{ data, isLoading, error }` not arrays
+- Handle all async states explicitly
 
-### Styling
-- Tailwind utility classes only — no custom CSS files except for comic-panel layout in `src/styles/`
-- Use `cn()` (from `src/lib/utils.ts`) to merge conditional Tailwind classes
-- Dark mode via `dark:` Tailwind classes — no JS theme toggling
+### API Routes
+- `app/api/.../route.ts` — Next.js Route Handlers
+- Validate request bodies with `zod`
+- Return `NextResponse.json({ error }, { status })` for all error cases
+- Admin check: `session.user.app_metadata.role === 'admin'`
 
-### Naming
-- Components: `PascalCase` (e.g., `StoryPanel`, `CodeEditor`)
-- Hooks: `useCamelCase` (e.g., `useProgress`, `useCodeRunner`)
-- Constants: `SCREAMING_SNAKE_CASE` (e.g., `MAX_EXECUTION_TIME_MS`)
-- DB models: `PascalCase` matching Prisma schema
+### Supabase
+- Import client from `@/lib/supabase` — never instantiate directly in components
+- Always destructure and check `error` before using `data`
+- RLS must be enabled on all tables — no exceptions
 
 ---
 
 ## Testing Conventions
 
-- **Red first**: always write a failing test before implementation
-- Unit tests in `tests/unit/` — mirror `src/` directory structure
-- E2E tests in `tests/e2e/` using Playwright with `page.getByRole()` queries
-- Prefer semantic queries: `getByRole` > `getByLabelText` > `getByText` > `getByTestId`
-- Use `it("does X when Y")` format — no numbered test names
-- Integration tests use a separate `DATABASE_URL_TEST` database
+- Test files: `tests/unit/components/StoryCard.test.tsx` mirrors `src/components/`
+- Use `describe` blocks for grouping
+- `data-testid` attributes for Playwright selectors
+- Mock Supabase in unit tests with `vi.mock('@/lib/supabase')`
+- Test behavior, not implementation details
 
 ---
 
-## Domain Knowledge
+## Boundaries
 
-### Story Format
-Each story is an MDX file in `src/stories/` exporting:
-- `metadata`: `{ title, category, difficulty, problemId, prerequisites }`
-- default export: `Panel[]` array
-
-### Code Sandbox
-User code runs in a **Web Worker** (`src/lib/sandbox.ts`). Never execute user code in the main thread or server-side. Sandbox enforces a 5-second timeout.
-
-### Progress Unlock Logic
-A story is "completed" only when the user submits a passing solution to its embedded problem. Reading the story alone does NOT unlock the next arc. This logic lives in `POST /api/submit`.
-
----
-
-## Boundaries — What Copilot Should NOT Do
-
-- Do NOT refactor code outside the file currently being edited unless explicitly asked
-- Do NOT remove existing passing tests
-- Do NOT add new npm dependencies without a comment explaining why
-- Do NOT run user code outside the Web Worker sandbox
-- Do NOT generate placeholder `any` types — use `unknown` and add a TODO if unsure
-- Do NOT suggest skipping the red phase of TDD
-- Do NOT use `console.log` for debugging in committed code — use structured logging or remove before commit
+- **Do not** refactor working code unless explicitly asked
+- **Do not** remove or skip existing tests
+- **Do not** use `any` type — use `unknown` and narrow
+- **Do not** add `// @ts-ignore` without an explanation comment
+- **Do not** use `useEffect` for initial data loading (use server components)
+- **Do not** expose `SUPABASE_SERVICE_ROLE_KEY` in any `NEXT_PUBLIC_` env var
+- **Do not** write CSS outside Tailwind classes (no `style={{}}` except CSS variables)
+- **Do not** create new pages without a corresponding test file

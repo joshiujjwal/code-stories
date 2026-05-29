@@ -1,107 +1,101 @@
-# CodeStories 📖⚡
+# code-stories
 
-> **Learn and solve coding/algorithm problems through narrative comic stories**
+> 🎬 Short-form video stories that teach DSA and Leetcode problems — like TikTok for algorithms.
 
 ![Status](https://img.shields.io/badge/status-🚧%20Early%20Development-orange)
-![Stack](https://img.shields.io/badge/stack-Next.js%20%7C%20TypeScript%20%7C%20Tailwind-blue)
-
-Each data structure or algorithm concept is taught through an engaging illustrated story arc — making DSA memorable, not miserable. Think of it as LeetCode meets a graphic novel.
+![Stack](https://img.shields.io/badge/stack-Next.js%20%2B%20TypeScript-blue)
 
 ---
 
-## ✨ Concept
+## What It Is
 
-| Old Way | CodeStories Way |
+Code Stories turns dry algorithm problems into **visual, narrative-driven short videos**. Each story walks through a Leetcode problem or DSA concept as an animated explainer — voiceover, step-by-step visualization, and a swipeable card-style feed. Think Reels, but you leave knowing how to solve Two Sum.
+
+---
+
+## Tech Stack
+
+| Layer | Choice |
 |---|---|
-| "Implement BFS on a graph" | A courier navigating a city block-by-block, visiting every street before going deeper |
-| "Reverse a linked list" | A train switching directions at a mountain pass |
-| "Binary search" | A detective cutting a suspect list in half each clue |
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Animation | Framer Motion |
+| Video | HTML5 video + Supabase Storage |
+| Database | Supabase (Postgres + Auth + Storage) |
+| State | Zustand |
+| Testing | Vitest + React Testing Library + Playwright |
+| Deployment | Vercel |
 
 ---
 
-## 🛠 Tech Stack
-
-- **Framework**: Next.js 14 (App Router) + TypeScript
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Story Content**: MDX (rich story + code interleaved)
-- **Code Runner**: Monaco Editor + in-browser JS execution sandbox
-- **Database**: PostgreSQL via Prisma (user progress, submissions)
-- **Auth**: NextAuth.js
-- **Testing**: Vitest + Playwright (E2E)
-- **Deploy**: Vercel (frontend) + Railway/Supabase (DB)
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/code-stories.git
+# Clone
+git clone git@github.com:joshiujjwal/code-stories.git
 cd code-stories
 
 # Install dependencies
-npm install        # TODO: confirm package manager (npm/pnpm)
+npm install
 
-# Set up environment
+# Copy env vars
 cp .env.example .env.local
-# Edit .env.local with your DB URL and auth secrets
+# Fill in Supabase URL + keys
 
-# Run database migrations
-npx prisma migrate dev
+# Run dev server
+npm run dev
 
-# Start dev server
-npm run dev        # TODO: runs on http://localhost:3000
-```
+# Run tests
+npm test
 
-### Running Tests
-
-```bash
-npm run test          # Unit tests (Vitest)
-npm run test:e2e      # End-to-end tests (Playwright)
-npm run test:watch    # Watch mode
+# Run e2e tests
+npm run test:e2e
 ```
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 code-stories/
 ├── src/
-│   ├── components/        # Reusable UI components (StoryPanel, CodeEditor, etc.)
-│   ├── stories/           # MDX story content files (one per DSA concept)
-│   ├── problems/          # Problem definitions, test cases, solutions
-│   ├── lib/               # Shared utilities (db client, auth helpers, sandboxer)
-│   ├── hooks/             # React hooks (useProgress, useStory, useCodeRunner)
-│   └── styles/            # Global styles, comic/panel CSS
+│   ├── app/              # Next.js App Router pages & layouts
+│   ├── components/       # Reusable UI components
+│   │   ├── feed/         # StoryCard, StoryFeed, ScrollSnapContainer
+│   │   ├── player/       # StoryPlayer, StoryOverlay, ProgressBar
+│   │   └── ui/           # Button, Badge, TagChip, Skeleton
+│   ├── lib/              # Supabase client, stories, progress, auth
+│   ├── hooks/            # useStoryFeed, useAuth, useProgress
+│   └── types/            # Shared TypeScript interfaces
 ├── tests/
-│   ├── unit/              # Component and utility unit tests
-│   ├── integration/       # API route and DB interaction tests
-│   └── e2e/               # Full user-journey Playwright tests
+│   ├── unit/             # Vitest unit tests (mirrors src/)
+│   ├── integration/      # API + DB integration tests
+│   └── e2e/              # Playwright end-to-end tests
 ├── docs/
-│   ├── spec.md            # Feature specification
-│   └── adr/               # Architecture Decision Records
+│   ├── spec.md           # Feature specification
+│   └── adr/              # Architecture Decision Records
 ├── .github/
-│   ├── copilot-instructions.md
-│   ├── instructions/      # Path-specific Copilot instructions
-│   └── skills/
-├── README.md
-├── TODO.md
-├── CLAUDE.md
-└── AGENTS.md
+│   └── copilot-instructions.md
+├── CLAUDE.md             # AI agent context (Anthropic)
+├── AGENTS.md             # Agent instructions (OpenAI)
+└── TODO.md               # Evidence-gated task breakdown
 ```
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-- **Write tests first** — no PR without a failing test that your implementation fixes
-- **Evidence in PRs** — screenshots, test output, or a short demo gif
-- **One concept per PR** — each story/problem pair ships independently
-- **Red → Green → Refactor** — strictly in that order
-- **No unreviewed code ships** — all PRs require at least one review
+1. Read `TODO.md` — find the next unchecked item in the current phase
+2. **Write tests first** (red phase) before any implementation
+3. Implement until tests pass (green phase)
+4. Review your own diff — no unreviewed code ships
+5. PRs must include: what changed, test output, manual testing evidence
+6. Keep PRs small and focused — one feature or fix per PR
+7. Update `CLAUDE.md` or `AGENTS.md` if you learn something non-obvious
 
 ---
 
-## 📄 License
+## License
 
-MIT
+Private. All rights reserved.
